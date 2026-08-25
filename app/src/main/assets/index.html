@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111a32"><title>RAJPUT COMMUNICATION POS</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial;background:#f4f6fa;color:#172033}
+header{position:sticky;top:0;z-index:5;background:#111a32;color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px}
+header b{font-size:17px}header small{display:block;color:#c8d0e1}.spacer{flex:1}
+nav{position:sticky;top:61px;z-index:4;background:#fff;border-bottom:1px solid #ddd;display:flex;overflow:auto}
+nav button{border:0;background:white;padding:12px 14px;white-space:nowrap;color:#445;cursor:pointer}nav button.active{color:#5b45f5;border-bottom:3px solid #5b45f5;font-weight:700}
+main{max-width:1200px;margin:auto;padding:14px}.view{display:none}.view.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card,.panel{background:#fff;border:1px solid #e2e6ee;border-radius:10px;padding:14px;margin-bottom:12px}.card small{color:#707b90}.card strong{display:block;font-size:20px;margin-top:5px}
+.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.toolbar h2{margin-right:auto}
+input,select,textarea{width:100%;padding:10px;border:1px solid #d7dce6;border-radius:7px;font:inherit;background:#fff}textarea{min-height:70px}label{font-size:12px;color:#647086}.row{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:9px}
+button,.btn{border:0;border-radius:7px;padding:10px 13px;background:#5b45f5;color:white;font-weight:600;cursor:pointer}.secondary{background:#e9edf4;color:#26324a}.danger{background:#df4e4e}.success{background:#168b60}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:8px;border-bottom:1px solid #edf0f4}th{font-size:11px;color:#788398;text-transform:uppercase}
+.scroll{overflow:auto}.products{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.product{background:#fff;border:1px solid #e0e5ed;border-radius:8px;padding:11px;text-align:left;cursor:pointer}.product:hover{border-color:#5b45f5}
+.total{display:flex;justify-content:space-between;font-size:19px;font-weight:800;padding:12px 0}.badge{display:inline-block;padding:4px 7px;border-radius:20px;background:#edf0f5;font-size:11px}.low{color:#c53030;font-weight:700}.ok{color:#14805a}.hidden{display:none!important}.muted{color:#788398;font-size:12px}
+.modal{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20;padding:15px}.modal.show{display:flex}.modalbox{background:#fff;border-radius:12px;width:min(600px,100%);max-height:90vh;overflow:auto;padding:16px}
+@media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.products{grid-template-columns:repeat(2,1fr)}.row{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><div><b>RAJPUT COMMUNICATION</b><small>Mobile Accessories • Mobile Repairing</small></div><div class=spacer></div><button onclick="backup()">Backup</button><button onclick="document.getElementById('restore').click()">Restore</button><input id=restore type=file accept=".json" class=hidden onchange="restoreFile(event)"></header>
+<nav>
+<button data-v=dashboard class=active>Dashboard</button><button data-v=pos>Billing</button><button data-v=inventory>Inventory</button><button data-v=repairs>Repairs</button><button data-v=customers>Customers</button><button data-v=expenses>Expenses</button><button data-v=reports>Reports</button>
+</nav>
+<main>
+<section id=dashboard class="view active"></section>
+<section id=pos class=view></section>
+<section id=inventory class=view></section>
+<section id=repairs class=view></section>
+<section id=customers class=view></section>
+<section id=expenses class=view></section>
+<section id=reports class=view></section>
+</main>
+<div id="modalOverlay" class="modal"><div id="modalbox" class="modalbox"></div></div>
+
+<script>
+const KEY="rajput_communication_pos_v1";
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{products:[],customers:[],sales:[],repairs:[],expenses:[],seq:1000};
+function save(){localStorage.setItem(KEY,JSON.stringify(db));}
+if(!db.products.length){db.products=[
+{id:1,sku:"ACC-001",name:"Type-C Cable",cat:"Cables",brand:"Generic",buy:250,sell:400,stock:20,min:5},
+{id:2,sku:"ACC-002",name:"iPhone Charger 20W",cat:"Chargers",brand:"Apple",buy:1800,sell:2500,stock:10,min:3},
+{id:3,sku:"ACC-003",name:"Samsung Earphones",cat:"Earphones",brand:"Samsung",buy:500,sell:900,stock:8,min:3},
+{id:4,sku:"ACC-004",name:"Tempered Glass",cat:"Screen Protectors",brand:"Generic",buy:180,sell:400,stock:25,min:5},
+{id:5,sku:"ACC-005",name:"Mobile Cover",cat:"Covers",brand:"Generic",buy:350,sell:600,stock:30,min:5}];save();}
+
+function money(n){return "Rs. "+Number(n||0).toLocaleString("en-PK",{maximumFractionDigits:0})}
+function id(){return Date.now()+Math.floor(Math.random()*999)}
+function nav(v){document.querySelectorAll(".view").forEach(x=>x.classList.toggle("active",x.id===v));document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x.dataset.v===v));render(v)}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>nav(b.dataset.v));
+function render(v){({dashboard,inventory,repairs,customers,expenses,reports,pos}[v])()}
+function dashboard(){
+ let today=new Date().toISOString().slice(0,10), sales=db.sales.filter(x=>x.date.slice(0,10)===today).reduce((a,x)=>a+x.total,0), paid=db.sales.filter(x=>x.date.slice(0,10)===today).reduce((a,x)=>a+x.paid,0), exp=db.expenses.filter(x=>x.date.slice(0,10)===today).reduce((a,x)=>a+x.amount,0), rp=db.repairs.filter(x=>x.date.slice(0,10)===today).reduce((a,x)=>a+x.paid,0), low=db.products.filter(x=>x.stock<=x.min);
+ document.getElementById("dashboard").innerHTML=`<h2>Dashboard</h2><div class=cards>
+ <div class=card><small>Today's Sales</small><strong>${money(sales)}</strong></div><div class=card><small>Collected</small><strong>${money(paid+rp)}</strong></div>
+ <div class=card><small>Today's Expenses</small><strong>${money(exp)}</strong></div><div class=card><small>Cash Movement</small><strong>${money(paid+rp-exp)}</strong></div></div>
+ <div class=grid><div class=panel><h3>Low Stock</h3>${low.length?low.map(p=>`<p><b>${p.name}</b> — <span class=low>${p.stock}</span> left (min ${p.min})</p>`).join(""):"<p class=ok>No low-stock items.</p>"}</div>
+ <div class=panel><h3>Pending Repairs</h3>${db.repairs.filter(r=>!["Delivered","Cancelled"].includes(r.status)).slice(-8).reverse().map(r=>`<p><b>${r.job}</b> ${r.device}<br><span class=badge>${r.status}</span> Due ${money(r.total-r.paid)}</p>`).join("")||"<p>No pending repairs.</p>"}</div></div>`;
+}
+function inventory(){
+ let q=(document.getElementById("invq")?.value||"").toLowerCase(), rows=db.products.filter(p=>(p.name+p.sku+p.brand+p.cat).toLowerCase().includes(q));
+ document.getElementById("inventory").innerHTML=`<div class=toolbar><h2>Inventory</h2><input id=invq placeholder="Search product / SKU / brand" value="${q}" style="max-width:300px"><button onclick="productForm()">+ Add Product</button></div>
+ <div class=panel><div class=scroll><table><tr><th>SKU</th><th>Product</th><th>Category</th><th>Buy</th><th>Sell</th><th>Stock</th><th>Status</th></tr>${rows.map(p=>`<tr><td>${p.sku}</td><td><b>${p.name}</b><br><span class=muted>${p.brand}</span></td><td>${p.cat}</td><td>${money(p.buy)}</td><td>${money(p.sell)}</td><td>${p.stock}</td><td>${p.stock<=p.min?'<span class=low>LOW</span>':'<span class=ok>OK</span>'}</td></tr>`).join("")}</table></div></div>`;
+ document.getElementById("invq").oninput=inventory;
+}
+function productForm(){
+ modal(`<h3>Add Product</h3><div class=row><label>SKU<input id=fsku></label><label>Product name<input id=fname></label><label>Category<input id=fcat></label><label>Brand<input id=fbrand></label><label>Purchase price<input id=fbuy type=number></label><label>Selling price<input id=fsell type=number></label><label>Opening stock<input id=fstock type=number value=0></label><label>Minimum stock<input id=fmin type=number value=0></label></div><button onclick="addProduct()">Save Product</button> <button class=secondary onclick=closeModal()>Cancel</button>`);
+}
+function addProduct(){let p={id:id(),sku:document.getElementById("fsku").value.trim(),name:document.getElementById("fname").value.trim(),cat:document.getElementById("fcat").value.trim(),brand:document.getElementById("fbrand").value.trim(),buy:+document.getElementById("fbuy").value||0,sell:+document.getElementById("fsell").value||0,stock:+document.getElementById("fstock").value||0,min:+document.getElementById("fmin").value||0};if(!p.sku||!p.name)return alert("SKU and product name are required.");if(db.products.some(x=>x.sku===p.sku))return alert("SKU already exists.");db.products.push(p);save();closeModal();inventory();}
+let cart=[];
+function pos(){
+ document.getElementById("pos").innerHTML=`<h2>Billing / POS</h2><div class=grid><div><div class=toolbar><input id=pq placeholder="Search products"></div><div id=plist class=products></div></div><div class=panel><h3>Current Bill</h3><label>Customer name<input id=cname placeholder="Walk-in Customer"></label><br><label>Phone<input id=cphone></label><div id=cartbox></div><div class=total><span>Total</span><span id=carttotal>${money(0)}</span></div><label>Paid<input id=paid type=number value=0></label><br><label>Payment<select id=pmethod><option>Cash</option><option>JazzCash</option><option>Easypaisa</option><option>Bank</option><option>Credit</option></select></label><br><button class=success style="width:100%" onclick=completeSale()>Complete Sale & Print</button></div></div>`;
+ drawProducts();pq.oninput=drawProducts;drawCart();
+}
+function drawProducts(){let q=pq.value.toLowerCase();plist.innerHTML=db.products.filter(p=>p.stock>0&&(p.name+p.sku+p.brand).toLowerCase().includes(q)).map(p=>`<button class=product onclick="addCart(${p.id})"><b>${p.name}</b><br><span class=muted>${p.sku} • Stock ${p.stock}</span><br>${money(p.sell)}</button>`).join("")}
+function addCart(pid){let p=db.products.find(x=>x.id===pid),c=cart.find(x=>x.id===pid);if(c){if(c.qty>=p.stock)return alert("Not enough stock");c.qty++}else cart.push({id:pid,qty:1});drawCart()}
+function changeQty(id,d){let c=cart.find(x=>x.id===id),p=db.products.find(x=>x.id===id);c.qty+=d;if(c.qty>p.stock)c.qty=p.stock;if(c.qty<=0)cart=cart.filter(x=>x.id!==id);drawCart()}
+function drawCart(){let total=0;cartbox.innerHTML=cart.map(c=>{let p=db.products.find(x=>x.id===c.id),s=p.sell*c.qty;total+=s;return `<p><b>${p.name}</b> × ${c.qty} = ${money(s)} <button onclick="changeQty(${p.id},-1)">−</button><button onclick="changeQty(${p.id},1)">+</button></p>`}).join("")||"<p class=muted>Tap products to add them.</p>";carttotal.textContent=money(total);if(!+paid.value)paid.value=total}
+function completeSale(){if(!cart.length)return alert("Add a product first.");let total=cart.reduce((s,c)=>{let p=db.products.find(x=>x.id===c.id);return s+p.sell*c.qty},0),pmt=+paid.value||0;let invoice="INV-"+(++db.seq);cart.forEach(c=>{let p=db.products.find(x=>x.id===c.id);p.stock-=c.qty});let phone=cphone.value.trim(),name=cname.value.trim()||"Walk-in Customer";if(phone&&!db.customers.some(c=>c.phone===phone))db.customers.push({id:id(),name,phone});db.sales.push({id:id(),invoice,customer:name,phone,total,paid:pmt,method:pmethod.value,date:new Date().toISOString(),items:cart.map(c=>({id:c.id,qty:c.qty}))});save();printInvoice(db.sales.at(-1));cart=[];pos()}
+function printInvoice(s){let items=s.items.map(c=>{let p=db.products.find(x=>x.id===c.id);return `<tr><td>${p.name}</td><td>${c.qty}</td><td>${money(p.sell)}</td><td>${money(p.sell*c.qty)}</td></tr>`}).join("");let w=window.open("","_blank");if(!w){alert("Allow pop-ups to print invoice.");return}w.document.write(`<html><head><title>${s.invoice}</title><style>body{font-family:Arial;width:300px;margin:auto}table{width:100%;font-size:12px;border-collapse:collapse}td{padding:5px;border-bottom:1px dashed #aaa}.r{text-align:right}</style></head><body><h3>RAJPUT COMMUNICATION</h3><p>Mobile Accessories • Mobile Repairing</p><p>Invoice: ${s.invoice}<br>${new Date(s.date).toLocaleString()}<br>Customer: ${s.customer}<br>Phone: ${s.phone||"-"}</p><table>${items}</table><h3 class=r>Total: ${money(s.total)}</h3><p>Paid: ${money(s.paid)}<br>Due: ${money(Math.max(0,s.total-s.paid))}<br>Payment: ${s.method}</p><p>Thank you!</p><script>window.print()<\/script></body></html>`);w.document.close()}
+function repairs(){
+ document.getElementById("repairs").innerHTML=`<div class=toolbar><h2>Repair Jobs</h2><button onclick=repairForm()>+ New Repair</button></div><div class=panel><div class=scroll><table><tr><th>Job</th><th>Customer</th><th>Device</th><th>Complaint</th><th>Status</th><th>Total</th><th>Due</th></tr>${db.repairs.slice().reverse().map(r=>`<tr><td>${r.job}</td><td>${r.customer}<br>${r.phone}</td><td>${r.device}<br><span class=muted>IMEI ${r.imei||"-"}</span></td><td>${r.complaint}</td><td><span class=badge>${r.status}</span></td><td>${money(r.total)}</td><td class=low>${money(r.total-r.paid)}</td></tr>`).join("")||"<tr><td colspan=7>No repair jobs.</td></tr>"}</table></div></div>`;
+}
+function repairForm(){
+ modal(`<h3>New Repair Job</h3><div class=row><label>Customer<input id=rc></label><label>Phone<input id=rp></label><label>Device / Model<input id=rd></label><label>IMEI<input id=ri></label><label>Complaint<textarea id=rco></textarea></label><label>Condition / Accessories<textarea id=rn></textarea></label><label>Estimated total<input id=rt type=number></label><label>Advance paid<input id=rpaid type=number value=0></label><label>Technician<input id=tech></label><label>Status<select id=rs><option>Received</option><option>Diagnosing</option><option>Waiting Parts</option><option>Repairing</option><option>Ready</option><option>Delivered</option><option>Cancelled</option></select></label></div><button onclick=addRepair()>Create Job</button> <button class=secondary onclick=closeModal()>Cancel</button>`);
+}
+function addRepair(){if(!rc.value||!rd.value)return alert("Customer and device are required.");let job="R-"+(++db.seq);db.repairs.push({id:id(),job,customer:rc.value,phone:rp.value,device:rd.value,imei:ri.value,complaint:rco.value,note:rn.value,total:+rt.value||0,paid:+rpaid.value||0,technician:tech.value,status:rs.value,date:new Date().toISOString()});if(rp.value&&!db.customers.some(c=>c.phone===rp.value))db.customers.push({id:id(),name:rc.value,phone:rp.value});save();closeModal();repairs()}
+function customers(){document.getElementById("customers").innerHTML=`<div class=toolbar><h2>Customers</h2><button onclick=customerForm()>+ Add Customer</button></div><div class=panel><table><tr><th>Name</th><th>Phone</th><th>Sales</th><th>Repairs</th></tr>${db.customers.map(c=>`<tr><td>${c.name}</td><td>${c.phone}</td><td>${money(db.sales.filter(s=>s.phone===c.phone).reduce((a,x)=>a+x.total,0))}</td><td>${db.repairs.filter(r=>r.phone===c.phone).length}</td></tr>`).join("")||"<tr><td colspan=4>No customers yet.</td></tr>"}</table></div>`}
+function customerForm(){modal(`<h3>Add Customer</h3><label>Name<input id=cn></label><br><label>Phone<input id=cp></label><br><button onclick="db.customers.push({id:id(),name:document.getElementById("cn").value,phone:document.getElementById("cp").value});save();closeModal();customers()">Save</button>`)}
+function expenses(){document.getElementById("expenses").innerHTML=`<div class=toolbar><h2>Expenses</h2><button onclick=expenseForm()>+ Add Expense</button></div><div class=panel><table><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr>${db.expenses.slice().reverse().map(e=>`<tr><td>${new Date(e.date).toLocaleString()}</td><td>${e.cat}</td><td>${e.desc}</td><td>${money(e.amount)}</td></tr>`).join("")||"<tr><td colspan=4>No expenses yet.</td></tr>"}</table></div>`}
+function expenseForm(){modal(`<h3>Add Expense</h3><div class=row><label>Category<input id=ec></label><label>Amount<input id=ea type=number></label></div><label>Description<textarea id=ed></textarea></label><br><button onclick="db.expenses.push({id:id(),cat:document.getElementById("ec").value,amount:+document.getElementById("ea").value||0,desc:document.getElementById("ed").value,date:new Date().toISOString()});save();closeModal();expenses()">Save Expense</button>`)}
+function reports(){let sales=db.sales.reduce((a,x)=>a+x.total,0),col=db.sales.reduce((a,x)=>a+x.paid,0),exp=db.expenses.reduce((a,x)=>a+x.amount,0),repair=db.repairs.reduce((a,x)=>a+x.paid,0),cost=db.sales.reduce((a,s)=>a+s.items.reduce((z,i)=>z+(db.products.find(p=>p.id===i.id)?.buy||0)*i.qty,0),0),profit=sales-cost;document.getElementById("reports").innerHTML=`<h2>Reports</h2><div class=cards><div class=card><small>Total Sales</small><strong>${money(sales)}</strong></div><div class=card><small>Sales Collected</small><strong>${money(col)}</strong></div><div class=card><small>Repair Payments</small><strong>${money(repair)}</strong></div><div class=card><small>Expenses</small><strong>${money(exp)}</strong></div></div><div class=panel><h3>Estimated Accessories Gross Profit</h3><strong>${money(profit)}</strong><p class=muted>This excludes repair labour/parts because those costs need to be entered separately.</p></div>`}
+function modal(s){document.getElementById("modalbox").innerHTML=s;document.getElementById("modalOverlay").classList.add("show")}function closeModal(){document.getElementById("modalOverlay").classList.remove("show")}
+function backup(){let blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="RAJPUT_COMMUNICATION_backup_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(a.href)}
+function restoreFile(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.products||!x.sales)throw 0;db=x;save();location.reload()}catch(_){alert("Invalid backup file.")}};r.readAsText(f)}
+dashboard();
+</script></body></html>
